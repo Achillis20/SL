@@ -1,0 +1,130 @@
+CREATE DATABASE Shreyash;
+USE Shreyash;
+
+-- Create the Branch table (first, since it's referenced by other tables)
+CREATE TABLE Branch (
+    branch_name VARCHAR(50) PRIMARY KEY,
+    branch_city VARCHAR(50),
+    assets DECIMAL(15, 2) CHECK (assets >= 0)
+);
+
+-- Create the Account table
+CREATE TABLE Account (
+    Acc_no INT PRIMARY KEY,
+    branch_name VARCHAR(50),
+    balance DECIMAL(10, 2) CHECK (balance >= 0),
+    FOREIGN KEY (branch_name) REFERENCES Branch(branch_name)
+);
+
+-- Create the Customer table
+CREATE TABLE Customer (
+    cust_name VARCHAR(50),
+    cust_street VARCHAR(100),
+    cust_city VARCHAR(50),
+    PRIMARY KEY (cust_name)
+);
+
+-- Create the Loan table
+CREATE TABLE Loan (
+    loan_no INT PRIMARY KEY,
+    branch_name VARCHAR(50),
+    amount DECIMAL(10, 2) CHECK (amount > 0),
+    FOREIGN KEY (branch_name) REFERENCES Branch(branch_name)
+);
+
+-- Create the Depositor table
+CREATE TABLE Depositor (
+    cust_name VARCHAR(50),
+    Acc_no INT,  -- Corrected case: Acc_no to match Account table
+    FOREIGN KEY (cust_name) REFERENCES Customer(cust_name),
+    FOREIGN KEY (Acc_no) REFERENCES Account(Acc_no)
+);
+
+-- Create the Borrower table
+CREATE TABLE Borrower (
+    cust_name VARCHAR(50),
+    loan_no INT,
+    FOREIGN KEY (cust_name) REFERENCES Customer(cust_name),
+    FOREIGN KEY (loan_no) REFERENCES Loan(loan_no)
+);
+
+-- Insert data into Branch
+INSERT INTO Branch VALUES ('Akurdi', 'Pune', 5000000);
+INSERT INTO Branch VALUES ('Nigdi', 'Pune', 3000000);
+INSERT INTO Branch VALUES ('Chinchwad', 'Pune', 4000000);
+
+-- Insert data into Account
+INSERT INTO Account VALUES (101, 'Akurdi', 15000);
+INSERT INTO Account VALUES (102, 'Nigdi', 12000);
+INSERT INTO Account VALUES (103, 'Chinchwad', 9000);
+INSERT INTO Account VALUES (104, 'Akurdi', 20000);
+INSERT INTO Account VALUES (105, 'Nigdi', 5000);
+
+-- Insert data into Customer
+INSERT INTO Customer VALUES ('Pratham', 'Street 1', 'Pune');
+INSERT INTO Customer VALUES ('Parth', 'Street 2', 'Pune');
+INSERT INTO Customer VALUES ('Sanskar', 'Street 3', 'Mumbai');
+INSERT INTO Customer VALUES ('Aadesh', 'Street 4', 'Pune');
+INSERT INTO Customer VALUES ('Moin', 'Street 5', 'Delhi');
+
+-- Insert data into Depositor
+INSERT INTO Depositor VALUES ('Pratham', 101);
+INSERT INTO Depositor VALUES ('Parth', 102);
+INSERT INTO Depositor VALUES ('Sanskar', 103);
+INSERT INTO Depositor VALUES ('Aadesh', 104);
+INSERT INTO Depositor VALUES ('Moin', 105);
+
+-- Insert data into Loan
+INSERT INTO Loan VALUES (201, 'Akurdi', 18000);
+INSERT INTO Loan VALUES (202, 'Nigdi', 1400);
+INSERT INTO Loan VALUES (203, 'Chinchwad', 20000);
+INSERT INTO Loan VALUES (204, 'Akurdi', 15000);
+
+-- Insert data into Borrower
+INSERT INTO Borrower VALUES ('Pratham', 201);
+INSERT INTO Borrower VALUES ('Parth', 202);
+INSERT INTO Borrower VALUES ('Sanskar', 203);
+INSERT INTO Borrower VALUES ('Moin', 204);
+
+-- Queries
+
+SELECT DISTINCT branch_name FROM Loan;
+
+SELECT loan_no FROM Loan WHERE branch_name = 'Akurdi' AND amount > 12000;
+
+SELECT Borrower.cust_name, Borrower.loan_no, Loan.amount 
+FROM Borrower
+JOIN Loan ON Borrower.loan_no = Loan.loan_no;
+
+SELECT Borrower.cust_name
+FROM Borrower
+JOIN Loan ON Borrower.loan_no = Loan.loan_no
+WHERE Loan.branch_name = 'Akurdi'
+ORDER BY Borrower.cust_name;
+
+SELECT DISTINCT cust_name 
+FROM Depositor
+UNION
+SELECT DISTINCT cust_name 
+FROM Borrower;
+
+SELECT Depositor.cust_name 
+FROM Depositor
+JOIN Borrower ON Depositor.cust_name = Borrower.cust_name;
+
+SELECT Depositor.cust_name
+FROM Depositor
+WHERE cust_name NOT IN (SELECT cust_name FROM Borrower);
+
+SELECT AVG(balance) 
+FROM Account 
+WHERE branch_name = 'Akurdi';
+
+SELECT branch_name, AVG(balance) AS avg_balance 
+FROM Account 
+GROUP BY branch_name;
+
+SELECT branch_name, COUNT(DISTINCT Depositor.cust_name) AS num_depositors
+FROM Account
+JOIN Depositor ON Account.Acc_no = Depositor.Acc_no
+GROUP BY branch_name;

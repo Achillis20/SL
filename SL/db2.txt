@@ -1,0 +1,142 @@
+CREATE DATABASE Shreyash2;
+
+USE Shreyash2;
+
+-- Create cust_mstr table
+CREATE TABLE cust_mstr (
+    cust_no INT PRIMARY KEY,
+    fname VARCHAR(50) NOT NULL,
+    lname VARCHAR(50) NOT NULL
+);
+
+-- Create add_dets table
+CREATE TABLE add_dets (
+    code_no INT PRIMARY KEY,
+    add1 VARCHAR(100),
+    add2 VARCHAR(100),
+    state VARCHAR(50),
+    city VARCHAR(50),
+    pincode VARCHAR(10),
+    FOREIGN KEY (code_no) REFERENCES cust_mstr(cust_no)
+);
+
+-- Insert data into cust_mstr
+INSERT INTO cust_mstr VALUES (1, 'xyz', 'pqr');
+INSERT INTO cust_mstr VALUES (2, 'abc', 'def');
+
+-- Insert data into add_dets
+INSERT INTO add_dets VALUES (1, '123 Street', 'Apartment 1', 'Maharashtra', 'Mumbai', '400001');
+INSERT INTO add_dets VALUES (2, '456 Street', 'Apartment 2', 'Delhi', 'New Delhi', '110001');
+
+SELECT c.fname, c.lname, a.add1, a.add2, a.state, a.city, a.pincode 
+FROM cust_mstr c
+JOIN add_dets a ON c.cust_no = a.code_no
+WHERE c.fname = 'xyz' AND c.lname = 'pqr';
+
+CREATE TABLE cust_mstr1 (
+    cust_no INT PRIMARY KEY,
+    fname VARCHAR(50),
+    lname VARCHAR(50)
+);
+
+CREATE TABLE acc_fd_cust_dets (
+    codeno INT,
+    acc_fd_no INT PRIMARY KEY,
+    FOREIGN KEY (codeno) REFERENCES cust_mstr1(cust_no)
+);
+
+CREATE TABLE fd_dets (
+    fd_sr_no INT PRIMARY KEY,
+    amt DECIMAL(10, 2),
+    acc_fd_no INT,
+    FOREIGN KEY (acc_fd_no) REFERENCES acc_fd_cust_dets(acc_fd_no)
+);
+
+-- Insert data
+INSERT INTO cust_mstr1 VALUES (1, 'Rahul', 'Doe');
+INSERT INTO cust_mstr1 VALUES (2, 'raj', 'Smith');
+INSERT INTO cust_mstr1 VALUES (3, 'Pratham', 'Brown');
+INSERT INTO cust_mstr1 VALUES (4, 'parth', 'White');
+
+INSERT INTO acc_fd_cust_dets VALUES (1, 101);
+INSERT INTO acc_fd_cust_dets VALUES (2, 102);
+INSERT INTO acc_fd_cust_dets VALUES (3, 103);
+INSERT INTO acc_fd_cust_dets VALUES (4, 104);
+
+INSERT INTO fd_dets VALUES (1, 6000, 101);
+INSERT INTO fd_dets VALUES (2, 4000, 102);
+INSERT INTO fd_dets VALUES (3, 8000, 103);
+INSERT INTO fd_dets VALUES (4, 3000, 104);
+
+-- List customers with fixed deposits > 5000
+SELECT c.fname, c.lname, f.amt 
+FROM cust_mstr1 c
+JOIN acc_fd_cust_dets a ON c.cust_no = a.codeno
+JOIN fd_dets f ON a.acc_fd_no = f.acc_fd_no
+WHERE f.amt > 5000;
+
+CREATE TABLE emp_mstr (
+    emp_no INT PRIMARY KEY,
+    f_name VARCHAR(50),
+    l_name VARCHAR(50),
+    m_name VARCHAR(50),
+    dept VARCHAR(50),
+    desg VARCHAR(50),
+    branch_no INT
+);
+
+CREATE TABLE branch_mstr (
+    name VARCHAR(50),
+    b_no INT PRIMARY KEY
+);
+
+-- Insert data
+INSERT INTO branch_mstr VALUES ('Main Branch', 1);
+INSERT INTO branch_mstr VALUES ('City Branch', 2);
+INSERT INTO branch_mstr VALUES ('Town Branch', 3);
+
+INSERT INTO emp_mstr VALUES (1, 'Pratham', 'Doe', 'A', 'HR', 'Manager', 1);
+INSERT INTO emp_mstr VALUES (2, 'raj', 'Smith', 'B', 'IT', 'Developer', 2);
+INSERT INTO emp_mstr VALUES (3, 'rahul', 'Brown', 'C', 'Finance', 'Advisor', 3);
+UPDATE emp_mstr SET desg = 'Advisor' WHERE emp_no = 3;
+
+-- List employee details with branch names
+SELECT e.emp_no, e.f_name, e.l_name, e.m_name, e.dept, e.desg, b.name AS branch_name
+FROM emp_mstr e
+JOIN branch_mstr b ON e.branch_no = b.b_no;
+
+-- 4. Create and insert data into emp_mstr and cntc_dets tables, then list employee details with contact details
+-- Create tables
+CREATE TABLE emp_mstr1 (
+    emp_no INT PRIMARY KEY,
+    f_name VARCHAR(50),
+    l_name VARCHAR(50),
+    m_name VARCHAR(50),
+    dept VARCHAR(50)
+);
+
+CREATE TABLE cntc_dets (
+    code_no INT,
+    cntc_type VARCHAR(50),
+    cntc_data VARCHAR(100),
+    FOREIGN KEY (code_no) REFERENCES emp_mstr1(emp_no)
+);
+
+-- Insert data
+INSERT INTO emp_mstr1 VALUES (1, 'Pratham', 'Doe', 'A', 'HR');
+INSERT INTO emp_mstr1 VALUES (2, 'raj', 'Smith', 'B', 'IT');
+INSERT INTO emp_mstr1 VALUES (3, 'rahul', 'Brown', 'C', 'Finance');
+
+INSERT INTO cntc_dets VALUES (1, 'Phone', '1234567890');
+INSERT INTO cntc_dets VALUES (2, 'Email', 'jane.smith@example.com');
+INSERT INTO cntc_dets VALUES (3, 'Phone', '9876543210');
+
+-- List employee details with contact details using LEFT OUTER JOIN
+SELECT e.emp_no, e.f_name, e.l_name, e.m_name, e.dept, c.cntc_type, c.cntc_data
+FROM emp_mstr1 e
+LEFT OUTER JOIN cntc_dets c ON e.emp_no = c.code_no;
+
+-- List employee details with contact details using RIGHT JOIN
+SELECT e.emp_no, e.f_name, e.l_name, e.m_name, e.dept, c.cntc_type, c.cntc_data
+FROM emp_mstr1 e
+RIGHT JOIN cntc_dets c ON e.emp_no = c.code_no;

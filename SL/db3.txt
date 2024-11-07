@@ -1,0 +1,29 @@
+
+use Shreyash
+
+db.createCollection("Teachers")
+
+db.createCollection("Students")
+
+db.Teachers.insertMany([ { Tname: "Praveen", dno: 1, dname: "IT", experience: 5, salary: 12000, date_of_joining: new Date("2018-06-01") }, { Tname: "Sita", dno: 2, dname: "Computer", experience: 3, salary: 9000, date_of_joining: new Date("2020-07-15") }, { Tname: "Ramesh", dno: 3, dname: "E&TC", experience: 8, salary: 15000, date_of_joining: new Date("2015-08-20") }, { Tname: "Amit", dno: 4, dname: "IT", experience: 2, salary: 8000, date_of_joining: new Date("2021-05-10") }] )
+
+db.Students.insertMany([ { Sname: "Aarav", roll_no: 1, class: "12A" }, { Sname: "Anaya", roll_no: 2, class: "12B" }, { Sname: "Raj", roll_no: 3, class: "12C" }] )
+
+db.Teachers.find().pretty()
+ 
+db.Teachers.find({dname:"Computer"}).pretty()
+
+db.Teachers.find({dname:{$in:["Computer","IT","E&TC"]}}).pretty()
+
+db.Teachers.find({ dname: { $in: ["Computer", "IT", "E&TC"] }, salary: { $gte: 10000 } }).pretty()
+
+db.Students.find({ $or: [ { roll_no: 2 }, { Sname: "Raj" }] }).pretty()
+
+db.Teachers.updateOne( { Tname: "Praveen" }, { $set: { experience: 10 } }, { upsert: true } )
+
+db.Teachers.updateMany( { Dname: "IT" }, { $set: {dname: "COMP" } })
+
+db.Teachers.find({},{Tname:1,experience:1}).pretty()
+
+db.Teachers.deleteMany({dname:"IT"})
+

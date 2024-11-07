@@ -1,0 +1,201 @@
+CREATE DATABASE dbms_4;
+USE dbms_4;
+
+
+-- Q1
+CREATE TABLE Stud (
+    Roll    INT(5) PRIMARY KEY,
+    Att     INT(3),      -- Attendance percentage (0 to 100)
+    Status  VARCHAR(2)     -- Status: 'D' (Denied) or 'ND' (Not Denied)
+);
+
+INSERT INTO Stud (Roll, Att, Status) VALUES (101, 80, NULL);  -- Student with 80% attendance
+INSERT INTO Stud (Roll, Att, Status) VALUES (102, 60, NULL);  -- Student with 60% attendance
+INSERT INTO Stud (Roll, Att, Status) VALUES (103, 90, NULL);  -- Student with 90% attendance
+INSERT INTO Stud (Roll, Att, Status) VALUES (104, 50, NULL);  -- Student with 50% attendance
+
+COMMIT;  -- Save the changes
+
+DELIMITER $$
+
+CREATE PROCEDURE CheckAttendance(IN p_roll INT)
+BEGIN
+    DECLARE v_att INT;
+    DECLARE v_not_found INT DEFAULT 0;
+
+    -- Check if the student exists and get the attendance
+    SELECT Att INTO v_att
+    FROM Stud
+    WHERE Roll = p_roll
+    LIMIT 1;
+
+    -- If no row is found, handle it
+    IF v_att IS NULL THEN
+        SET v_not_found = 1;
+    END IF;
+
+    -- Check attendance and update the status
+    IF v_not_found = 1 THEN
+        SELECT 'Error: No such student found with Roll No ' AS Message, p_roll AS Roll;
+    ELSE
+        IF v_att < 75 THEN
+            -- Update the status to 'D' (Denied)
+            UPDATE Stud SET Status = 'D' WHERE Roll = p_roll;
+            SELECT 'Term not granted' AS Message, p_roll AS Roll;
+        ELSE
+            -- Update the status to 'ND' (Not Denied)
+            UPDATE Stud SET Status = 'ND' WHERE Roll = p_roll;
+            SELECT 'Term granted' AS Message, p_roll AS Roll;
+        END IF;
+    END IF;
+END $$
+
+DELIMITER ;
+
+CALL CheckAttendance(102);  -- Replace 101 with the roll number you want to check
+
+-- Q2
+CREATE TABLE account_master (
+    account_no int PRIMARY KEY,   -- Account number
+    balance    decimal(10, 2)         -- Current balance in the account
+);
+
+-- Insert some sample data
+INSERT INTO account_master (account_no, balance) VALUES (1001, 5000.00);  -- Account with 5000 balance
+INSERT INTO account_master (account_no, balance) VALUES (1002, 3000.00);  -- Account with 3000 balance
+INSERT INTO account_master (account_no, balance) VALUES (1003, 1500.00);  -- Account with 1500 balance
+
+COMMIT;
+
+DELIMITER $$
+
+CREATE PROCEDURE WithdrawAmount(
+    IN p_account_no INT,        -- Input for account number
+    IN p_withdrawal DECIMAL(10,2) -- Input for withdrawal amount
+)
+BEGIN
+    DECLARE v_balance DECIMAL(10, 2);  -- Variable to store the account balance
+    DECLARE insufficient_funds TINYINT DEFAULT 0;  -- Flag for insufficient funds
+    
+    -- Fetch the current balance from the account
+    SELECT balance INTO v_balance
+    FROM account_master
+    WHERE account_no = p_account_no;
+
+    -- Check if withdrawal exceeds the current balance
+    IF p_withdrawal > v_balance THEN
+        SET insufficient_funds = 1;  -- Set flag for insufficient funds
+    ELSE
+        -- Perform the withdrawal and update the balance
+        UPDATE account_master
+        SET balance = balance - p_withdrawal
+        WHERE account_no = p_account_no;
+
+        -- Output success message
+        SELECT CONCAT('Withdrawal successful. New balance is: ', (v_balance - p_withdrawal)) AS Message;
+    END IF;
+
+    -- Handle insufficient funds case
+    IF insufficient_funds = 1 THEN
+        SELECT CONCAT('Error: Insufficient funds. Available balance is: ', v_balance) AS Message;
+    END IF;
+
+END $$
+
+DELIMITER ;
+
+CALL WithdrawAmount(1001, 6000);  -- Trying to withdraw 6000 from account 1001
+CALL WithdrawAmount(1002, 2000);  -- Trying to withdraw 2000 from account 1002
+
+
+-- Q3
+CREATE TABLE Borrower (
+    Roll_no INT,                  -- Roll number of the borrower
+    Name VARCHAR(50),             -- Name of the borrower
+    Date_of_Issue DATE,           -- Date when the book was issued
+    Name_of_Book VARCHAR(100),    -- Name of the book
+    Status CHAR(1),               -- Status: 'I' for issued, 'R' for returned
+    PRIMARY KEY (Roll_no, Name_of_Book)
+);
+
+CREATE TABLE Fine (
+    Roll_no INT,                  -- Roll number of the borrower
+    Date DATE,                    -- Date when the fine is imposed
+    Amt DECIMAL(10,2),            -- Fine amount
+    FOREIGN KEY (Roll_no) REFERENCES Borrower(Roll_no)
+);
+
+-- Insert some sample data into Borrower table
+INSERT INTO Borrower (Roll_no, Name, Date_of_Issue, Name_of_Book, Status) 
+VALUES 
+(101, 'Alice', '2023-08-01', 'Book A', 'I'),
+(102, 'Bob', '2023-08-10', 'Book B', 'I');
+
+COMMIT;
+
+DELIMITER $$
+
+CREATE PROCEDURE ReturnBook(
+    IN p_roll_no INT, 
+    IN p_book_name VARCHAR(100)
+)
+BEGIN
+    DECLARE v_days INT;               -- Variable to store the number of days since issue
+    DECLARE v_fine DECIMAL(10,2);     -- Variable to store the calculated fine amount
+    DECLARE v_date_of_issue DATE;     -- Variable to store the issue date
+    DECLARE v_status CHAR(1);         -- Variable to store the status of the book
+
+    -- Check if the book exists and fetch Date_of_Issue and Status
+    SELECT Date_of_Issue, Status 
+    INTO v_date_of_issue, v_status
+    FROM Borrower
+    WHERE Roll_no = p_roll_no AND Name_of_Book = p_book_name;
+
+    -- If the book doesn't exist, raise a custom error
+    IF v_date_of_issue IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: No such book found for the given Roll number.';
+    END IF;
+
+    -- Check if the book is already returned
+    IF v_status = 'R' THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: The book has already been returned.';
+    END IF;
+
+    -- Calculate the number of days since the book was issued
+    SET v_days = DATEDIFF(CURDATE(), v_date_of_issue);
+
+    -- Initialize fine to 0
+    SET v_fine = 0;
+
+    -- Calculate the fine based on the number of days
+    IF v_days BETWEEN 15 AND 30 THEN
+        SET v_fine = (v_days - 14) * 5;
+    ELSEIF v_days > 30 THEN
+        SET v_fine = (v_days - 30) * 50 + (30 - 14) * 5;
+    END IF;
+
+    -- Update the status of the book to 'R' (returned)
+    UPDATE Borrower 
+    SET Status = 'R'
+    WHERE Roll_no = p_roll_no AND Name_of_Book = p_book_name;
+
+    -- If there is any fine, insert it into the Fine table
+    IF v_fine > 0 THEN
+        INSERT INTO Fine (Roll_no, Date, Amt) 
+        VALUES (p_roll_no, CURDATE(), v_fine);
+    END IF;
+
+    -- Output messages
+    IF v_fine > 0 THEN
+        SELECT CONCAT('Book returned. Fine imposed: Rs ', v_fine) AS Message;
+    ELSE
+        SELECT 'Book returned. No fine imposed.' AS Message;
+    END IF;
+
+END $$
+
+DELIMITER ;
+
+CALL ReturnBook(101, 'Book A');  -- Test with a valid Roll_no and Book name
+CALL ReturnBook(102, 'Book B');  -- Test with another valid case
+CALL ReturnBook(999, 'Nonexistent Book');  -- Test with an invalid book to trigger custom error
